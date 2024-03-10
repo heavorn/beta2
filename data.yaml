@@ -1,0 +1,6 @@
+train: beta2/datasets/train
+val: beta2/datasets/test
+test: beta2/datasets/test
+
+nc: 10
+names: ['2.2', '3', '5.1', '5.2', '6.1', '8', '9', 'c', 't', 'w']
