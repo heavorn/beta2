@@ -16,10 +16,10 @@ class YOLO(Model):
     def task_map(self):
         """Map head to model, trainer, validator, and predictor classes"""
         return {
-                'detect': {
-                'model': DetectionModel,
-                'trainer': DetectionTrainer,
-                'validator': DetectionValidator,
-                'predictor': DetectionPredictor, },
-            
-            	}
+            "detect": {
+                "model": DetectionModel,
+                "trainer": DetectionTrainer,
+                "validator": DetectionValidator,
+                "predictor": DetectionPredictor,
+            },
+        }

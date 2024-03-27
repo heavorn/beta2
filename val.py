@@ -6,8 +6,10 @@ from models.detect import YOLO
 # # model = YOLO('yolov8-p2.yaml') # load an official model
 # model = YOLO(f'validation/detect_{w}_100.pt')  # load a custom model
 
-w_list = ['msfnns']
-n = 5
+w_list = ['c2f-r2nfn-slimc']
+# w_list = ['c2f-r2nfn']
+# w_list = ['v8']
+n = 1
 
 for w in w_list:
 	map50 = []
@@ -17,7 +19,7 @@ for w in w_list:
 	# model = YOLO(f'v2_{w}_300.pt')
 	model = YOLO(f'weight/{w_list[0]}.pt')
 	for _ in range(n):
-		metrics = model.val(data='data.yaml', device='mps')
+		metrics = model.val(data='data_2.yaml', device='mps')
 		map50.append(metrics.box.map50)
 		map75.append(metrics.box.map75)
 		mapall.append(metrics.box.map)

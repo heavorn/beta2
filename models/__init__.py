@@ -4,4 +4,4 @@
 # from .sam import SAM
 from .detect import YOLO
 
-__all__ = 'YOLO'  # allow simpler import
+__all__ = "YOLO"  # allow simpler import

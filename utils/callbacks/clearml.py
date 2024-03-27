@@ -4,19 +4,19 @@ from utils import LOGGER, SETTINGS, TESTS_RUNNING
 
 try:
     assert not TESTS_RUNNING  # do not log pytest
-    assert SETTINGS['clearml'] is True  # verify integration is enabled
+    assert SETTINGS["clearml"] is True  # verify integration is enabled
     import clearml
     from clearml import Task
     from clearml.binding.frameworks.pytorch_bind import PatchPyTorchModelIO
     from clearml.binding.matplotlib_bind import PatchedMatplotlib
 
-    assert hasattr(clearml, '__version__')  # verify package is not directory
+    assert hasattr(clearml, "__version__")  # verify package is not directory
 
 except (ImportError, AssertionError):
     clearml = None
 
 
-def _log_debug_samples(files, title='Debug Samples') -> None:
+def _log_debug_samples(files, title="Debug Samples") -> None:
     """
     Log files (images) as debug samples in the ClearML task.
 
@@ -29,12 +29,14 @@ def _log_debug_samples(files, title='Debug Samples') -> None:
     if task := Task.current_task():
         for f in files:
             if f.exists():
-                it = re.search(r'_batch(\d+)', f.name)
+                it = re.search(r"_batch(\d+)", f.name)
                 iteration = int(it.groups()[0]) if it else 0
-                task.get_logger().report_image(title=title,
-                                               series=f.name.replace(it.group(), ''),
-                                               local_path=str(f),
-                                               iteration=iteration)
+                task.get_logger().report_image(
+                    title=title,
+                    series=f.name.replace(it.group(), ""),
+                    local_path=str(f),
+                    iteration=iteration,
+                )
 
 
 def _log_plot(title, plot_path) -> None:
@@ -50,20 +52,23 @@ def _log_plot(title, plot_path) -> None:
 
     img = mpimg.imread(plot_path)
     fig = plt.figure()
-    ax = fig.add_axes([0, 0, 1, 1], frameon=False, aspect='auto', xticks=[], yticks=[])  # no ticks
+    ax = fig.add_axes(
+        [0, 0, 1, 1], frameon=False, aspect="auto", xticks=[], yticks=[]
+    )  # no ticks
     ax.imshow(img)
 
-    Task.current_task().get_logger().report_matplotlib_figure(title=title,
-                                                              series='',
-                                                              figure=fig,
-                                                              report_interactive=False)
+    Task.current_task().get_logger().report_matplotlib_figure(
+        title=title, series="", figure=fig, report_interactive=False
+    )
 
 
 def on_pretrain_routine_start(trainer):
     """Runs at start of pretraining routine; initializes and connects/ logs task to ClearML."""
-    RED = '\033[91m'
-    RESET = '\033[0m'
-    print(f"{RED}'Modified ClearML on_pretrain_routine_start at:\tultils/callbacks/clearml.py{RESET}")
+    RED = "\033[91m"
+    RESET = "\033[0m"
+    print(
+        f"{RED}'Modified ClearML on_pretrain_routine_start at:\tultils/callbacks/clearml.py{RESET}"
+    )
     # try:
     #     if task := Task.current_task():
     #         # Make sure the automatic pytorch and matplotlib bindings are disabled!
@@ -91,22 +96,27 @@ def on_train_epoch_end(trainer):
     if task := Task.current_task():
         # Log debug samples
         if trainer.epoch == 1:
-            _log_debug_samples(sorted(trainer.save_dir.glob('train_batch*.jpg')), 'Mosaic')
+            _log_debug_samples(
+                sorted(trainer.save_dir.glob("train_batch*.jpg")), "Mosaic"
+            )
         # Report the current training progress
         for k, v in trainer.validator.metrics.results_dict.items():
-            task.get_logger().report_scalar('train', k, v, iteration=trainer.epoch)
+            task.get_logger().report_scalar("train", k, v, iteration=trainer.epoch)
 
 
 def on_fit_epoch_end(trainer):
     """Reports model information to logger at the end of an epoch."""
     if task := Task.current_task():
         # You should have access to the validation bboxes under jdict
-        task.get_logger().report_scalar(title='Epoch Time',
-                                        series='Epoch Time',
-                                        value=trainer.epoch_time,
-                                        iteration=trainer.epoch)
+        task.get_logger().report_scalar(
+            title="Epoch Time",
+            series="Epoch Time",
+            value=trainer.epoch_time,
+            iteration=trainer.epoch,
+        )
         if trainer.epoch == 0:
             from ultralytics.utils.torch_utils import model_info_for_loggers
+
             for k, v in model_info_for_loggers(trainer).items():
                 task.get_logger().report_single_value(k, v)
 
@@ -115,7 +125,7 @@ def on_val_end(validator):
     """Logs validation results including labels and predictions."""
     if Task.current_task():
         # Log val_labels and val_pred
-        _log_debug_samples(sorted(validator.save_dir.glob('val*.jpg')), 'Validation')
+        _log_debug_samples(sorted(validator.save_dir.glob("val*.jpg")), "Validation")
 
 
 def on_train_end(trainer):
@@ -123,21 +133,35 @@ def on_train_end(trainer):
     if task := Task.current_task():
         # Log final results, CM matrix + PR plots
         files = [
-            'results.png', 'confusion_matrix.png', 'confusion_matrix_normalized.png',
-            *(f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R'))]
-        files = [(trainer.save_dir / f) for f in files if (trainer.save_dir / f).exists()]  # filter
+            "results.png",
+            "confusion_matrix.png",
+            "confusion_matrix_normalized.png",
+            *(f"{x}_curve.png" for x in ("F1", "PR", "P", "R")),
+        ]
+        files = [
+            (trainer.save_dir / f) for f in files if (trainer.save_dir / f).exists()
+        ]  # filter
         for f in files:
             _log_plot(title=f.stem, plot_path=f)
         # Report final metrics
         for k, v in trainer.validator.metrics.results_dict.items():
             task.get_logger().report_single_value(k, v)
         # Log the final model
-        task.update_output_model(model_path=str(trainer.best), model_name=trainer.args.name, auto_delete_file=False)
+        task.update_output_model(
+            model_path=str(trainer.best),
+            model_name=trainer.args.name,
+            auto_delete_file=False,
+        )
 
 
-callbacks = {
-    'on_pretrain_routine_start': on_pretrain_routine_start,
-    'on_train_epoch_end': on_train_epoch_end,
-    'on_fit_epoch_end': on_fit_epoch_end,
-    'on_val_end': on_val_end,
-    'on_train_end': on_train_end} if clearml else {}
+callbacks = (
+    {
+        "on_pretrain_routine_start": on_pretrain_routine_start,
+        "on_train_epoch_end": on_train_epoch_end,
+        "on_fit_epoch_end": on_fit_epoch_end,
+        "on_val_end": on_val_end,
+        "on_train_end": on_train_end,
+    }
+    if clearml
+    else {}
+)
