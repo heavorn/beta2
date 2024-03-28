@@ -21,6 +21,7 @@ from nn.modules import (
     Focus,
     GhostConv,
     RepConv,
+    ADown,
     MSBlock,
     MSBlockLayer,
     FasterNetLayer,
@@ -613,6 +614,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             FasterNetLayer,
             PConv,
             GSConv,
+            ADown,
         ):
             c1, c2 = ch[f], args[0]
             if (
